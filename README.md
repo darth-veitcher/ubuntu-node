@@ -1,6 +1,6 @@
 # Ubuntu Node
 
-Setup for basic Ubuntu Server nodes, including provisioning for Kubernetes via [ansible](https://www.ansible.com). Primarily tested on 21.04 LTS.
+Setup for basic Ubuntu Server nodes, including provisioning for Kubernetes via [ansible](https://www.ansible.com). Primarily tested on 20.04 LTS.
 
 ## How to use
 
