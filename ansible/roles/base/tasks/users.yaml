@@ -1,0 +1,26 @@
+---
+# file: roles/base/tasks/users.yaml
+# Sets up initial admin user
+
+- name: create admin user {{ deploy_user_name }}
+  user:
+    name: "{{ deploy_user_name }}"
+    shell: /bin/bash
+    append: yes
+    groups: sudo
+  tags: user
+
+- name: add authorized_key
+  authorized_key:
+    user: "{{ deploy_user_name }}"
+    state: present
+    key: "{{ lookup('file', '{{ deploy_user_ssh_public_key }}') }}"
+  tags: users, ssh
+
+- name: allow passwordless sudo for {{ deploy_user_name }}
+  lineinfile: dest=/etc/sudoers
+              regexp="^{{ deploy_user_name }} ALL="
+              line="{{ deploy_user_name }} ALL=(ALL:ALL) NOPASSWD:ALL"
+              state=present
+              validate="/usr/sbin/visudo -cf %s"
+  tags: users

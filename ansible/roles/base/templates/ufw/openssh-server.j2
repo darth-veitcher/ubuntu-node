@@ -1,0 +1,7 @@
+# file: /etc/ufw/applications.d/openssh-server
+# Used to configure the ufw definition for OpenSSH
+
+[OpenSSH]
+title=Secure shell server, an rshd replacement
+description=OpenSSH is a free implementation of the Secure Shell protocol.
+ports={{ common_ssh_port }}/tcp

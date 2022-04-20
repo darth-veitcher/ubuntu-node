@@ -1,0 +1,33 @@
+---
+all:
+  hosts:
+    localbox:
+      ansible_port: 22  # 22 to begin with then 2222 afterwards
+      ansible_host: 192.168.0.234
+      ansible_user: adminlocal  # ubuntu when fresh, adminlocal afterwards
+      ansible_ssh_private_key_file: ~/.ssh/id_rsa
+  children:
+    dev_masters:
+      hosts:
+        node-1:
+          ansible_host: 192.168.0.10
+    dev_workers:
+      hosts:
+        node-2:
+          ansible_host: 192.168.0.11
+        node-3:
+          ansible_host: 192.168.0.12
+    dev:
+      children:
+        dev_masters:
+        dev_workers:
+      vars:
+        ansible_port: 2222  # 22 to begin with then 2222 afterwards
+        ansible_user: adminlocal  # ubuntu when fresh, adminlocal afterwards
+        ansible_ssh_private_key_file: ~/.ssh/id_rsa
+    masters:
+      children:
+        dev_masters:
+    workers:
+      children:
+        dev_workers:

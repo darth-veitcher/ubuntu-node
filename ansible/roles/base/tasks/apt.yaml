@@ -1,0 +1,33 @@
+---
+# file: roles/base/tasks/apt.yaml
+# Contains simple tasks to configure APT
+- name: update APT package cache
+  apt: update_cache=yes cache_valid_time=3600
+  tags: apt
+
+  # value of state must be one of: absent, build-dep, fixed, latest, present
+- name: install aptitude
+  apt: name=aptitude state=latest
+  tags: apt
+
+- name: upgrade APT to the latest packages
+  apt: upgrade=safe
+  tags: apt
+
+- name: install core packages
+  apt: 
+    name: ['nano', 'wget', 'curl', 'p7zip-full', 'git', 'ufw', 'ntp', 'screen']
+    state: latest
+    install_recommends: no
+    update_cache: yes
+  tags: apt
+
+- name: Remove useless packages from the cache
+  apt:
+    autoclean: yes
+  tags: apt
+
+- name: Remove dependencies that are no longer required
+  apt:
+    autoremove: yes
+  tags: apt

@@ -1,0 +1,34 @@
+---
+# file: roles/base/tasks/main.yaml
+# Contains basic setup tasks for Ubuntu
+- include: library/ssh_setup.yaml
+
+# Hostname
+- name: Set hostname to inventory hostname
+  hostname: name={{inventory_hostname}}
+
+# APT
+- include: apt.yaml
+
+# Logwatch
+- include: logwatch.yaml
+  when: logwatch_email is defined and logwatch_email|length > 0
+
+# Users
+- include: users.yaml
+
+# SSH and Firewall hardening
+- include: ssh.yaml
+- include: firewall.yaml
+
+# Avahi service discovery (optional)
+- include: avahi.yaml
+  when: enable_avahi is undefined or enable_avahi|bool is true
+
+# Disable history
+- name: disable bash history
+  become: "{{ item }}"
+  shell: echo 'alias exit="kill -9 $$"' >> ~/.bashrc
+  loop:
+  - true
+  - false

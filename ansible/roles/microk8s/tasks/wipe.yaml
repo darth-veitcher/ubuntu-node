@@ -1,0 +1,18 @@
+# file: roles/microk8s/tasks/wipe.yml
+# removes microk8s and all associated configs
+- name: remove microk8s
+  community.general.snap:
+    name: microk8s
+    classic: yes
+    state: absent
+  tags: apt
+
+- name: cleanup configs
+  file:
+    path: /var/snap/microk8s
+    state: absent
+  ignore_errors: true
+
+- name: reboot
+  shell: shutdown -r now
+  tags: reboot

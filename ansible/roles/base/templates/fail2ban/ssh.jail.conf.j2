@@ -1,0 +1,24 @@
+# file: /etc/fail2ban/jail.d/ssh.conf
+# Used to configure a Fail2Ban jail for SSH
+
+[sshd]
+enabled  = true
+port = ssh
+filter = sshd
+action = ufw[name=SSH, port=ssh, protocol=tcp]
+logpath = %(sshd_log)s
+maxretry = 5 ;# Override the default of 3
+
+[sshd-ddos]
+enabled = true
+port    = ssh
+action = ufw[name=SSH, port=ssh, protocol=tcp]
+logpath = %(sshd_log)s
+
+[sshd-nokey]
+enabled = true
+port    = ssh
+filter  = ssh-nokey
+action = ufw[name=SSH, port=ssh, protocol=tcp]
+logpath = %(sshd_log)s
+maxretry = 5 ;# Override the default of 3

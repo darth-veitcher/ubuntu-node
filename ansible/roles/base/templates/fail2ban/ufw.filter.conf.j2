@@ -1,0 +1,11 @@
+# file: /etc/fail2ban/filter.d/ufw.conf
+# Fail2Ban UFW Block filter
+# custom filter for when UFW blocks attempted connections. This will also include attempts
+# on standard SSH port (see below).
+# --
+# [UFW BLOCK] IN=ens3 OUT= MAC=fa:16:3e:e0:bf:05:a2:e0:b4:aa:04:18:08:00 SRC=167.71.50.28 DST=<my ip address> LEN=60 TOS=0x00 PREC=0x00 TTL=46 ID=13405 DF PROTO=TCP SPT=40150 DPT=22 WINDOW=64240 RES=0x00 SYN URGP=0 
+# [UFW BLOCK] IN=ens3 OUT= MAC=fa:16:3e:e0:bf:05:a2:e0:b4:aa:04:18:08:00 SRC=167.71.50.28 DST=<my ip address> LEN=60 TOS=0x00 PREC=0x00 TTL=46 ID=13406 DF PROTO=TCP SPT=40150 DPT=22 WINDOW=64240 RES=0x00 SYN URGP=0 
+# [UFW BLOCK] IN=ens3 OUT= MAC=fa:16:3e:e0:bf:05:a2:e0:b4:aa:04:18:08:00 SRC=167.71.50.28 DST=<my ip address> LEN=60 TOS=0x00 PREC=0x00 TTL=46 ID=13407 DF PROTO=TCP SPT=40150 DPT=22 WINDOW=64240 RES=0x00 SYN URGP=0 
+# [UFW BLOCK] IN=ens3 OUT= MAC=fa:16:3e:e0:bf:05:a2:e0:b4:aa:04:18:08:00 SRC=167.71.50.28 DST=<my ip address> LEN=60 TOS=0x00 PREC=0x00 TTL=46 ID=13408 DF PROTO=TCP SPT=40150 DPT=22 WINDOW=64240 RES=0x00 SYN URGP=0
+[Definition]
+failregex = ^.*\[UFW BLOCK\].*SRC=<HOST> DST.*$

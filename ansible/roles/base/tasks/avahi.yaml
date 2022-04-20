@@ -1,0 +1,14 @@
+---
+# file: roles/base/tasks/avahi.yaml
+# Installas avahi to facilitate service discovery on a local
+# network via the mDNS protocol.
+- name: install avahi packages
+  apt: 
+    name: ['avahi-daemon', 'avahi-utils', 'libnss-mdns']
+    state: latest
+    install_recommends: no
+  tags: avahi
+
+- name: enable avahi service
+  service: name=avahi-daemon state=restarted enabled=yes
+  tags: avahi

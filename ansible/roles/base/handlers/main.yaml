@@ -1,0 +1,11 @@
+---
+# file: roles/base/handlers/main.yml
+- name: restart ssh
+  service: name=ssh state=restarted enabled=yes
+
+- name: restart fail2ban
+  service: name=fail2ban state=restarted enabled=yes
+
+- name: restart ufw
+  service: name=ufw state=restarted enabled=yes
+  ignore_errors: true

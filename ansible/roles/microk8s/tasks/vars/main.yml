@@ -1,0 +1,8 @@
+---
+# file: roles/microk8s/vars/main.yml
+
+# whether to join / configure a cluster
+init_cluster: false
+
+# whether to wipe a cluster
+wipe_cluster: false

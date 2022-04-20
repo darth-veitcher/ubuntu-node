@@ -1,0 +1,44 @@
+---
+# file: roles/microk8s/tasks/cluster.yml
+# initialises a cluster
+- block:
+  - name: setup master node
+    shell: microk8s enable dns storage rbac
+  - name: get join code
+    shell: microk8s add-node --token-ttl 3600
+    register: add_node
+  - debug: var=add_node
+  - set_fact:
+      join_command: "{{add_node.stdout_lines[1]}}"
+  - debug: var=join_command
+  - name: create temp folder for join files
+    file:
+      state: directory
+      path: deploy/microk8s
+    delegate_to: "localhost"
+    become: no
+  - copy: content="{{ join_command }}" dest="deploy/microk8s/join_command"
+    delegate_to: 127.0.0.1
+    become: no
+  tags: cluster, cluster-join
+  run_once: yes
+
+- name: register_command
+  set_fact:
+    join_command: "{{ lookup('file', 'deploy/microk8s/join_command') }}"
+
+- debug: var=join_command
+
+- name: join cluster
+  shell: "{{ join_command }}"
+  async: 3600  # 1hr
+  poll: 30
+  tags: cluster, cluster-join
+
+- name: remove temp folder for join files
+  file:
+    state: absent
+    path: deploy/microk8s/join_command
+  delegate_to: "localhost"
+  become: no
+  tags: cluster, cluster-join

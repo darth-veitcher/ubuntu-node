@@ -1,0 +1,15 @@
+- name: install microk8s
+  community.general.snap:
+    name: microk8s
+    classic: yes
+    state: present
+  tags: apt
+
+- name: install storage packages
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - open-iscsi
+    - nfs-common
+  tags: apt

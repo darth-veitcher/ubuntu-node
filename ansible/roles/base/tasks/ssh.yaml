@@ -1,0 +1,240 @@
+---
+# file: roles/base/tasks/ssh.yaml
+# Performs some basic ssh/sshd config setup and hardening
+- name: enable authorized_keys
+  lineinfile: dest=/etc/ssh/sshd_config
+              regexp="^#?AuthorizedKeysFile"
+              line="AuthorizedKeysFile %h/.ssh/authorized_keys"
+              state=present
+              validate="sshd -T -f %s"
+  notify: restart ssh
+  tags: users, ssh
+
+- name: ensure group {{ ssh_users_group }} exists
+  group:
+    name: "{{ ssh_users_group }}"
+    state: present
+  tags: users, ssh
+
+- name: assign {{ deploy_user_name }} to {{ ssh_users_group }} group
+  user:
+    name: "{{ deploy_user_name }}"
+    state: present
+    append: yes
+    groups: "{{ ssh_users_group }}"
+
+# Lock down SSH
+- name: disable password authentication
+  lineinfile: dest=/etc/ssh/sshd_config
+              regexp="^#?PasswordAuthentication"
+              line="PasswordAuthentication no"
+              state=present
+              validate="sshd -T -f %s"
+  notify: restart ssh
+  tags: ssh
+
+- name: enable public key authentication
+  lineinfile: dest=/etc/ssh/sshd_config
+              regexp="^#?PubkeyAuthentication"
+              line="PubkeyAuthentication yes"
+              state=present
+              validate="sshd -T -f %s"
+  notify: restart ssh
+  tags: ssh
+
+- name: disallow root SSH access
+  lineinfile: dest=/etc/ssh/sshd_config
+              regexp="^#?PermitRootLogin"
+              line="PermitRootLogin no"
+              state=present
+              validate="sshd -T -f %s"
+  notify: restart ssh
+  tags: ssh
+
+- name: checking for AllowGroups in sshd_config
+  shell: cat /etc/ssh/sshd_config | grep AllowGroups | wc -l
+  register: test_allowgroups
+  tags: ssh
+
+- name: allow {{ ssh_users_group }}
+  lineinfile: dest=/etc/ssh/sshd_config
+              regexp="^#?AllowGroups"
+              line="AllowGroups {{ ssh_users_group }}"
+              state=present
+              validate="sshd -T -f %s"
+  notify: restart ssh
+  tags: ssh
+  when: test_allowgroups.stdout|int == 0
+
+# Append to any existing allowed groups with backrefs
+- name: append {{ ssh_users_group }} to existing allowances
+  lineinfile: 
+    path: /etc/ssh/sshd_config
+    regexp: ^#?(AllowGroups((?!.*\b{{ ssh_users_group }}\b).*))$
+    line: \1 {{ ssh_users_group }}
+    backrefs: yes
+    state: present
+    validate: sshd -T -f %s
+  notify: restart ssh
+  tags: ssh
+  when: test_allowgroups.stdout|int > 0
+
+- name: disable X11Forwarding
+  lineinfile: dest=/etc/ssh/sshd_config
+              regexp="^#?X11Forwarding"
+              line="X11Forwarding no"
+              state=present
+              validate="sshd -T -f %s"
+  notify: restart ssh
+  tags: ssh
+
+# FINALLY
+- name: change ssh port
+  lineinfile: dest=/etc/ssh/sshd_config
+              regexp="^Port\s"
+              line="Port {{ common_ssh_port }}"
+              state=present
+  notify: restart ssh
+  tags: ssh
+
+- name: be sure ssh is running and enabled
+  service: name=ssh state=restarted enabled=yes
+  tags: ssh
+
+# ANTI-LOCKOUT
+- name: switch playbook to use new user credentials going forwards
+  set_fact:
+    ansible_user: "{{ deploy_user_name }}"
+    ansible_ssh_private_key_file: "{{ deploy_user_ssh_private_key }}"
+    ansible_port: "{{ common_ssh_port }}"
+
+# Perform tinfoil hat adjustments
+# https://stribika.github.io/2015/01/04/secure-secure-shell.html
+# https://medium.com/@jasonrigden/hardening-ssh-1bcb99cd4cef
+- name: harden KexAlgorithms
+  lineinfile: dest=/etc/ssh/sshd_config
+              regexp="^#?KexAlgorithms"
+              line="KexAlgorithms curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256"
+              state=present
+              insertafter="# Ciphers and keying"
+              validate="sshd -T -f %s"
+  notify: restart ssh
+  tags: ssh, tinfoil
+
+- name: harden moduli for diffie-hellman-group-exchange-sha256
+  raw: |
+    awk '$5 > 2000' /etc/ssh/moduli > "${HOME}/moduli"; \
+    wc -l "${HOME}/moduli"; \
+    mv "${HOME}/moduli" /etc/ssh/moduli
+  notify: restart ssh
+  tags: ssh, tinfoil
+  when: regenerate_moduli is undefined or regenerate_moduli|bool is false
+
+- name: check for modulilockfile
+  stat:
+    path: /etc/ssh/modulilockfile
+  register: modulilockfile
+  tags: ssh, tinfoil
+
+- name: regenerate moduli
+  raw: |
+    ssh-keygen -G /etc/ssh/moduli.all -b 4096; \
+    ssh-keygen -T /etc/ssh/moduli.safe -f /etc/ssh/moduli.all; \
+    mv /etc/ssh/moduli.safe /etc/ssh/moduli; \
+    rm /etc/ssh/moduli.all
+  tags: ssh, tinfoil
+  register: regenerate_moduli_completed
+  when: modulilockfile.stat.exists|bool is false and regenerate_moduli|bool
+
+- debug:
+    var: regenerate_moduli_completed
+    verbosity: 2
+
+- name: create moduli lockfile
+  file:
+    path: /etc/ssh/modulilockfile
+    state: touch
+    modification_time: preserve
+    access_time: preserve
+  tags: ssh, tinfoil
+  when: regenerate_moduli_completed is defined and regenerate_moduli_completed.rc == 0
+  ignore_errors: True
+
+- name: force Protocol 2
+  lineinfile: dest=/etc/ssh/sshd_config
+              regexp="^#?Protocol"
+              line="Protocol 2"
+              state=present
+              insertbefore="^#?Port"
+              validate="sshd -T -f %s"
+  notify: restart ssh
+  tags: ssh, tinfoil
+
+- name: specify HostKey algorithms (allowed)
+  lineinfile: dest=/etc/ssh/sshd_config
+              regexp="^#?HostKey.*{{ item }}_key"
+              line="HostKey /etc/ssh/ssh_host_{{ item }}_key"
+              state=present
+              validate="sshd -T -f %s"
+  loop: [ed25519, rsa]
+  notify: restart ssh
+  tags: ssh, tinfoil
+
+- name: specify HostKey algorithms (disabled)
+  lineinfile: dest=/etc/ssh/sshd_config
+              regexp="^#?HostKey.*{{ item }}_key"
+              state=absent
+              validate="sshd -T -f %s"
+  loop: [ecdsa, dsa]
+  notify: restart ssh
+  tags: ssh, tinfoil
+
+- name: check for keylockfile
+  stat:
+    path: /etc/ssh/keylockfile
+  register: keylockfile
+  tags: ssh, tinfoil
+
+- name: regenerate server keys
+  raw: |
+    rm /etc/ssh/ssh_host_*key*; \
+    ssh-keygen -t ed25519 -f /etc/ssh/ssh_host_ed25519_key -N "" < /dev/null; \
+    ssh-keygen -t rsa -b 4096 -f /etc/ssh/ssh_host_rsa_key -N "" < /dev/null
+  notify: restart ssh
+  tags: ssh, tinfoil
+  register: regenerate_server_keys_completed
+  when: keylockfile.stat.exists|bool is false
+
+- debug:
+    var: regenerate_server_keys_completed
+    verbosity: 2
+
+- name: create server keys lockfile
+  file:
+    path: /etc/ssh/keylockfile
+    state: touch
+    modification_time: preserve
+    access_time: preserve
+  tags: ssh, tinfoil
+  when: regenerate_server_keys_completed is defined and regenerate_server_keys_completed.rc == 0
+  ignore_errors: True
+
+- name: specify Ciphers
+  lineinfile: dest=/etc/ssh/sshd_config
+              regexp="^#?Ciphers"
+              line="Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr"
+              state=present
+              insertafter="# Ciphers and keying"
+              validate="sshd -T -f %s"
+  notify: restart ssh
+  tags: ssh, tinfoil
+
+- name: specify Message authentication codes (MACs)
+  lineinfile: dest=/etc/ssh/sshd_config
+              regexp="^#?MACs"
+              line="MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-512,hmac-sha2-256,umac-128@openssh.com"
+              state=present
+              insertafter="# Ciphers and keying"
+              validate="sshd -T -f %s"
+  notify: restart ssh
+  tags: ssh, tinfoil

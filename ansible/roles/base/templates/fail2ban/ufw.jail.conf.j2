@@ -1,0 +1,10 @@
+# file: /etc/fail2ban/jail.d/ufw.conf
+# Used to configure a Fail2Ban jail for UFW
+
+[ufw]
+enabled = true
+filter = ufw
+action = ufw
+logpath = /var/log/ufw.log
+maxretry = 5 ;# Override the default of 3
+bantime = 30 ;# Indefinite is -1, selected 30mins

@@ -1,0 +1,9 @@
+# file: /etc/fail2ban/filter.d/ssh-nokey.conf
+# Fail2Ban PubKey Fail Filter
+# custom filter for when people attempt to connect via ssh 
+# without using a keyfile or provide invalid keyfile.
+# eg: Connection closed by authenticating user root 172.16.210.1 port 52029 [preauth]
+
+[Definition]
+failregex = ^.*sshd.*Connection closed .* <HOST> port .* \[preauth\]$
+            ^.*Disconnected from invalid user .* <HOST> .*$

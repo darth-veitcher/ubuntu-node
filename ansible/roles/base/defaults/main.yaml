@@ -1,0 +1,19 @@
+---
+# file: roles/base/defaults/main.yaml
+# Variables for base role. Can be overridden by prompts in playbook.
+
+# Email address to send logwatch output to. If not defined the tasks
+# will be skipped during deployment.
+logwatch_email: ""
+
+# Administrative user to create and their associated public ssh key
+# on local machine (to copy across to authorized_keys)
+# deploy_user_name: "adminlocal"
+deploy_user_ssh_public_key: "~/.ssh/id_rsa.pub"
+
+# Whether to regenerate the moduli as part of hardening. Takes a long
+# time but is recommended, particularly on cloud / external hardware.
+regenerate_moduli: "no"
+
+# Whether to enable service discovery.
+enable_avahi: "yes"

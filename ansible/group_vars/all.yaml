@@ -1,0 +1,8 @@
+---
+# file: group_vars/all.yml
+# `global` variables to be shared between underlying roles
+ssh_users_group: ssh-users
+deploy_user_name: adminlocal
+deploy_user_ssh_private_key: ~/.ssh/id_rsa
+deploy_user_ssh_public_key: ~/.ssh/id_rsa.pub
+common_ssh_port: 2222

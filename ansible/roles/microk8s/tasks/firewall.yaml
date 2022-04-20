@@ -1,0 +1,104 @@
+# file: roles/microk8s/tasks/firewall.yaml
+# Applies some initial sane defaults via UFW for a microk8s node
+
+- name: load br_netfilter
+  modprobe:
+    name: br_netfilter
+    state: present
+  tags: firewall, sysctl
+
+- name: enable forwarding of packets in the host kernel and allow iptables to see bridged traffic
+  sysctl:
+    name: "{{ item }}"
+    value: "1"
+    state: present
+    sysctl_set: yes
+    reload: yes
+  tags: firewall, sysctl
+  loop:
+    - net.ipv4.ip_forward
+    - net.ipv6.conf.all.forwarding
+    - net.bridge.bridge-nf-call-iptables
+    - net.bridge.bridge-nf-call-ip6tables
+
+- name: install ufw profile for k8s
+  template: >
+            src=templates/ufw/microk8s.conf.j2
+            dest=/etc/ufw/applications.d/microk8s owner=root group=root mode=0644
+  tags: firewall
+
+- name: update ufw knowledge of microk8s app profile
+  shell: ufw app update microk8s microk8s-internal
+  tags: firewall
+
+- name: allow access from localhost to microk8s
+  ufw:
+    rule: allow
+    name: "{{ item }}"
+    src: 127.0.0.1
+  loop:
+    - MicroK8s
+    - MicroK8s-internal
+  tags: firewall, k8s
+
+# The default IPv4 pool to create on startup if none exists. Pod IPs will be
+# chosen from this range. Changing this value after installation will have
+# no effect. This should fall within `--cluster-cidr`.
+# - name: CALICO_IPV4POOL_CIDR
+#   value: "10.1.0.0/16"
+- name: allow access from calico subnet to microk8s
+  ufw:
+    rule: allow
+    name: "{{ item }}"
+    src: 10.1.0.0/16
+  loop:
+    - MicroK8s
+    - MicroK8s-internal
+  tags: firewall, k8s
+
+# - name: allow access from kubernetes cni interface to microk8s
+#   ufw:
+#     rule: allow
+#     name: MicroK8s
+#     interface: vxlan.calico
+#     direction: "{{ item }}"
+#   loop:
+#     - in
+#     - out
+#   tags: firewall, k8s
+
+- name: allow kubernetes calico interface in/out
+  ufw:
+    rule: allow
+    interface: vxlan.calico
+    direction: "{{ item }}"
+    to_port: ''
+    comment: 'allow all traffic {{ item }} on interface vxlan.calico'
+  loop:
+    - in
+    - out
+  tags: firewall
+
+- name: allow access from vpn interface to microk8s
+  ufw:
+    rule: allow
+    name: "{{ item }}"
+    interface_in: wg0
+  loop:
+    - MicroK8s
+    - MicroK8s-internal
+  tags: firewall, k8s
+
+- name: allow http and https
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+  loop:
+    - http
+    - https
+  tags: firewall
+
+- name: restart ufw
+  service: name=ufw state=restarted enabled=yes
+  ignore_errors: false
+  tags: firewall

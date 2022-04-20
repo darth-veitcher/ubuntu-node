@@ -1,0 +1,95 @@
+---
+# file: roles/base/tasks/ssh.yaml
+# Performs some basic firewall config setup and hardening
+
+- name: configure the kernel to keep connections alive when enabling the firewall
+  sysctl:
+    name: net.netfilter.nf_conntrack_tcp_be_liberal
+    value: "1"
+    state: present
+    sysctl_set: yes
+    reload: yes
+    ignoreerrors: yes
+  tags: firewall, sysctl
+
+# UFW
+- name: install ufw
+  apt: 
+    name: ufw
+    state: latest
+    install_recommends: no
+  tags: apt, firewall
+
+- name: reset firewall
+  ufw: state=reset
+  tags: firewall
+  when: reset_firewall is defined and reset_firewall|bool
+
+- name: setup ufw
+  ufw: state=disabled policy=deny  # disable so we can allow SSH first....
+  tags: firewall
+
+- name: modify ufw openssh definition
+  template: >
+            src=templates/ufw/openssh-server.j2
+            dest=/etc/ufw/applications.d/openssh-server owner=root group=root mode=0644
+  tags: firewall, ssh
+
+- name: allow ssh traffic (with rate limiting)
+  ufw: rule=limit name=OpenSSH
+  tags: firewall, ssh
+
+- name: allow private subnets
+  ufw:
+    rule: allow
+    src: '{{ item }}'
+  loop:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+  tags: firewall
+
+# Fail2Ban
+- name: install fail2ban
+  apt: 
+    name: fail2ban
+    state: latest
+    install_recommends: no
+  tags: apt, firewall, fail2ban
+
+- name: create custom fail2ban ssh filter
+  template: >
+            src=templates/fail2ban/ssh.filter.conf.j2
+            dest=/etc/fail2ban/filter.d/ssh-nokey.conf owner=root group=root mode=0644
+  tags: firewall, fail2ban
+
+- name: create local fail2ban jail
+  template: >
+            src=templates/fail2ban/ssh.jail.conf.j2
+            dest=/etc/fail2ban/jail.d/ssh.conf owner=root group=root mode=0644
+  tags: firewall, fail2ban
+
+- name: create custom fail2ban ufw filter
+  template: >
+            src=templates/fail2ban/ufw.filter.conf.j2
+            dest=/etc/fail2ban/filter.d/ufw.conf owner=root group=root mode=0644
+  tags: firewall, fail2ban
+
+- name: create local fail2ban jail
+  template: >
+            src=templates/fail2ban/ufw.jail.conf.j2
+            dest=/etc/fail2ban/jail.d/ufw.conf owner=root group=root mode=0644
+  tags: firewall, fail2ban
+
+
+- name: enable fail2ban
+  service: name=fail2ban state=restarted enabled=yes
+  tags: firewall, fail2ban
+
+# FINALLY
+- name: enable ufw
+  ufw: state=enabled
+  notify: restart ufw
+  tags: firewall
+
+- include: library/ssh_setup.yaml

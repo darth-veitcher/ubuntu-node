@@ -1,0 +1,41 @@
+---
+# file: roles/microk8s/tasks/main.yml
+- include: wipe.yaml
+  when: wipe_cluster is defined and wipe_cluster
+  tags: cluster, wipe
+
+- block:
+  - include: apt.yaml
+  - include: firewall.yaml
+  - name: add {{ deploy_user_name }} to microk8s group
+    user:
+      name: "{{ deploy_user_name }}"
+      groups: microk8s
+      append: yes
+    tags: user
+  - name: get users home
+    become: false
+    set_fact:
+      user_home: ansible_env.HOME
+  - name: chown {{ user_home }}/.kube
+    file:
+      path: "{{ user_home }}/.kube"
+      state: directory
+      recurse: yes
+      owner: "{{ deploy_user_name }}"
+      group: "{{ deploy_user_name }}"
+    tags: user
+  - name: ensure .bashrc exists
+    raw: touch ~/.bashrc
+    become: false
+  - name: create alias for kubectl
+    become: false
+    lineinfile:
+      path: ~/.bashrc
+      line: alias kubectl="microk8s kubectl"
+    tags: user
+  tags: prep
+
+- include: cluster.yaml
+  when: init_cluster is defined and init_cluster
+  tags: cluster, init
