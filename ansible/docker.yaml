@@ -1,0 +1,8 @@
+---
+# file: docker.yaml
+# Playbook to deploy the `docker` role onto a server
+- hosts: all
+  gather_facts: no
+  become: true
+  roles:
+    - docker

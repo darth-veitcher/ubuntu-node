@@ -1,0 +1,57 @@
+---
+# file: roles/docker/tasks/main.yaml
+# Installs Docker Community Edition
+# see: https://docs.docker.com/engine/install/ubuntu/
+- name: remove any existing versions
+  apt:
+    name: [docker, docker-engine, docker.io, containerd, runc]
+    state: absent
+  tags: apt
+
+- name: install requirements
+  apt:
+    name: [apt-transport-https, ca-certificates, curl, software-properties-common, gnupg, lsb-release]
+    state: latest
+    update_cache: yes
+  tags: apt
+
+- name: remove Docker GPG key if it exists
+  file:
+    state: absent
+    path: /usr/share/keyrings/docker-archive-keyring.gpg
+  tags: apt, gpg
+
+- name: add Docker GPG key
+  shell: |
+     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+  tags: apt, gpg
+
+- name: set permissions on key
+  shell: sudo chmod a+r /usr/share/keyrings/docker-archive-keyring.gpg
+
+- name: set up stable repo
+  shell: |
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+    | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  tags: apt, gpg
+
+- name: install docker
+  apt:
+    name: [docker-ce, docker-ce-cli, containerd.io]
+    state: latest
+    update_cache: yes
+  tags: apt, docker
+
+- name: install docker-compose
+  apt: 
+    name: docker-compose
+    state: latest
+    update_cache: yes
+  tags: apt, docker
+
+- name: add {{ deploy_user_name }} to docker group
+  user:
+    name: "{{ deploy_user_name }}"
+    append: yes
+    groups: [docker]
+  tags: user, docker
