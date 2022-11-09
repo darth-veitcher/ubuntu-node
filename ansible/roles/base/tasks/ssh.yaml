@@ -3,10 +3,10 @@
 # Performs some basic ssh/sshd config setup and hardening
 - name: enable authorized_keys
   lineinfile: dest=/etc/ssh/sshd_config
-              regexp="^#?AuthorizedKeysFile"
-              line="AuthorizedKeysFile %h/.ssh/authorized_keys"
-              state=present
-              validate="sshd -T -f %s"
+    regexp="^#?AuthorizedKeysFile"
+    line="AuthorizedKeysFile %h/.ssh/authorized_keys"
+    state=present
+    validate="sshd -T -f %s"
   notify: restart ssh
   tags: users, ssh
 
@@ -26,28 +26,28 @@
 # Lock down SSH
 - name: disable password authentication
   lineinfile: dest=/etc/ssh/sshd_config
-              regexp="^#?PasswordAuthentication"
-              line="PasswordAuthentication no"
-              state=present
-              validate="sshd -T -f %s"
+    regexp="^#?PasswordAuthentication"
+    line="PasswordAuthentication no"
+    state=present
+    validate="sshd -T -f %s"
   notify: restart ssh
   tags: ssh
 
 - name: enable public key authentication
   lineinfile: dest=/etc/ssh/sshd_config
-              regexp="^#?PubkeyAuthentication"
-              line="PubkeyAuthentication yes"
-              state=present
-              validate="sshd -T -f %s"
+    regexp="^#?PubkeyAuthentication"
+    line="PubkeyAuthentication yes"
+    state=present
+    validate="sshd -T -f %s"
   notify: restart ssh
   tags: ssh
 
 - name: disallow root SSH access
   lineinfile: dest=/etc/ssh/sshd_config
-              regexp="^#?PermitRootLogin"
-              line="PermitRootLogin no"
-              state=present
-              validate="sshd -T -f %s"
+    regexp="^#?PermitRootLogin"
+    line="PermitRootLogin no"
+    state=present
+    validate="sshd -T -f %s"
   notify: restart ssh
   tags: ssh
 
@@ -58,17 +58,17 @@
 
 - name: allow {{ ssh_users_group }}
   lineinfile: dest=/etc/ssh/sshd_config
-              regexp="^#?AllowGroups"
-              line="AllowGroups {{ ssh_users_group }}"
-              state=present
-              validate="sshd -T -f %s"
+    regexp="^#?AllowGroups"
+    line="AllowGroups {{ ssh_users_group }}"
+    state=present
+    validate="sshd -T -f %s"
   notify: restart ssh
   tags: ssh
   when: test_allowgroups.stdout|int == 0
 
 # Append to any existing allowed groups with backrefs
 - name: append {{ ssh_users_group }} to existing allowances
-  lineinfile: 
+  lineinfile:
     path: /etc/ssh/sshd_config
     regexp: ^#?(AllowGroups((?!.*\b{{ ssh_users_group }}\b).*))$
     line: \1 {{ ssh_users_group }}
@@ -81,19 +81,19 @@
 
 - name: disable X11Forwarding
   lineinfile: dest=/etc/ssh/sshd_config
-              regexp="^#?X11Forwarding"
-              line="X11Forwarding no"
-              state=present
-              validate="sshd -T -f %s"
+    regexp="^#?X11Forwarding"
+    line="X11Forwarding no"
+    state=present
+    validate="sshd -T -f %s"
   notify: restart ssh
   tags: ssh
 
 # FINALLY
 - name: change ssh port
   lineinfile: dest=/etc/ssh/sshd_config
-              regexp="^Port\s"
-              line="Port {{ common_ssh_port }}"
-              state=present
+    regexp="^Port\s"
+    line="Port {{ common_ssh_port }}"
+    state=present
   notify: restart ssh
   tags: ssh
 
@@ -113,11 +113,11 @@
 # https://medium.com/@jasonrigden/hardening-ssh-1bcb99cd4cef
 - name: harden KexAlgorithms
   lineinfile: dest=/etc/ssh/sshd_config
-              regexp="^#?KexAlgorithms"
-              line="KexAlgorithms curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256"
-              state=present
-              insertafter="# Ciphers and keying"
-              validate="sshd -T -f %s"
+    regexp="^#?KexAlgorithms"
+    line="KexAlgorithms curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256"
+    state=present
+    insertafter="# Ciphers and keying"
+    validate="sshd -T -f %s"
   notify: restart ssh
   tags: ssh, tinfoil
 
@@ -136,7 +136,7 @@
   register: modulilockfile
   tags: ssh, tinfoil
 
-- name: regenerate moduli
+- name: regenerate moduli (ubuntu 18 and earlier)
   raw: |
     ssh-keygen -G /etc/ssh/moduli.all -b 4096; \
     ssh-keygen -T /etc/ssh/moduli.safe -f /etc/ssh/moduli.all; \
@@ -144,7 +144,17 @@
     rm /etc/ssh/moduli.all
   tags: ssh, tinfoil
   register: regenerate_moduli_completed
-  when: modulilockfile.stat.exists|bool is false and regenerate_moduli|bool
+  when: modulilockfile.stat.exists|bool is false and regenerate_moduli|bool and ansible_distribution_major_version|int < 20
+
+- name: regenerate moduli (ubuntu 20.04 and later)
+  raw: |
+    ssh-keygen -M generate -O bits=4096 /etc/ssh/moduli.all; \
+    ssh-keygen -M screen -f /etc/ssh/moduli.all /etc/ssh/moduli.safe; \
+    mv /etc/ssh/moduli.safe /etc/ssh/moduli; \
+    rm /etc/ssh/moduli.all
+  tags: ssh, tinfoil
+  register: regenerate_moduli_completed
+  when: modulilockfile.stat.exists|bool is false and regenerate_moduli|bool and ansible_distribution_major_version|int >= 20
 
 - debug:
     var: regenerate_moduli_completed
@@ -157,34 +167,34 @@
     modification_time: preserve
     access_time: preserve
   tags: ssh, tinfoil
-  when: regenerate_moduli_completed is defined and regenerate_moduli_completed.rc == 0
+  when: (regenerate_moduli is defined and regenerate_moduli|bool) and (regenerate_moduli_completed is defined and regenerate_moduli_completed.rc == 0)
   ignore_errors: True
 
 - name: force Protocol 2
   lineinfile: dest=/etc/ssh/sshd_config
-              regexp="^#?Protocol"
-              line="Protocol 2"
-              state=present
-              insertbefore="^#?Port"
-              validate="sshd -T -f %s"
+    regexp="^#?Protocol"
+    line="Protocol 2"
+    state=present
+    insertbefore="^#?Port"
+    validate="sshd -T -f %s"
   notify: restart ssh
   tags: ssh, tinfoil
 
 - name: specify HostKey algorithms (allowed)
   lineinfile: dest=/etc/ssh/sshd_config
-              regexp="^#?HostKey.*{{ item }}_key"
-              line="HostKey /etc/ssh/ssh_host_{{ item }}_key"
-              state=present
-              validate="sshd -T -f %s"
+    regexp="^#?HostKey.*{{ item }}_key"
+    line="HostKey /etc/ssh/ssh_host_{{ item }}_key"
+    state=present
+    validate="sshd -T -f %s"
   loop: [ed25519, rsa]
   notify: restart ssh
   tags: ssh, tinfoil
 
 - name: specify HostKey algorithms (disabled)
   lineinfile: dest=/etc/ssh/sshd_config
-              regexp="^#?HostKey.*{{ item }}_key"
-              state=absent
-              validate="sshd -T -f %s"
+    regexp="^#?HostKey.*{{ item }}_key"
+    state=absent
+    validate="sshd -T -f %s"
   loop: [ecdsa, dsa]
   notify: restart ssh
   tags: ssh, tinfoil
@@ -221,20 +231,20 @@
 
 - name: specify Ciphers
   lineinfile: dest=/etc/ssh/sshd_config
-              regexp="^#?Ciphers"
-              line="Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr"
-              state=present
-              insertafter="# Ciphers and keying"
-              validate="sshd -T -f %s"
+    regexp="^#?Ciphers"
+    line="Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr"
+    state=present
+    insertafter="# Ciphers and keying"
+    validate="sshd -T -f %s"
   notify: restart ssh
   tags: ssh, tinfoil
 
 - name: specify Message authentication codes (MACs)
   lineinfile: dest=/etc/ssh/sshd_config
-              regexp="^#?MACs"
-              line="MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-512,hmac-sha2-256,umac-128@openssh.com"
-              state=present
-              insertafter="# Ciphers and keying"
-              validate="sshd -T -f %s"
+    regexp="^#?MACs"
+    line="MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-512,hmac-sha2-256,umac-128@openssh.com"
+    state=present
+    insertafter="# Ciphers and keying"
+    validate="sshd -T -f %s"
   notify: restart ssh
   tags: ssh, tinfoil

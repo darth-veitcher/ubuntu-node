@@ -1,3 +1,9 @@
+#TODO: address deprecation in task? Looks like an issue with the actual module though.
+#[DEPRECATION WARNING]: The CmdMixin used in classes CmdModuleHelper and
+#CmdStateModuleHelper is being deprecated. Modules should use
+#community.general.plugins.module_utils.cmd_runner.CmdRunner instead. This feature
+#will be removed from community.general in version 8.0.0. Deprecation warnings can be
+#disabled by setting deprecation_warnings=False in ansible.cfg.
 - name: install microk8s
   community.general.snap:
     name: microk8s

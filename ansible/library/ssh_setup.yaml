@@ -7,11 +7,11 @@
     ssh_details_known: false
 
 #### Executed when we have a private key defined ####
-- include: library/ssh_setup/ssh_setup_private_key.yaml
+- include: library/ssh_setup/ssh_setup_private_key.yaml # TODO: replace `include` with `include_tasks` due to deprecation
   when: (ansible_ssh_private_key_file is defined) and (ssh_details_known is false)
 
 #### Executed when no private key defined / cant connect with key ####
-- include: library/ssh_setup/ssh_setup_basic.yaml
+ library/ssh_setup/ssh_setup_basic.yaml
   when: ssh_details_known is false
 
 # If the SSH port is neither the default or the configured, give up.

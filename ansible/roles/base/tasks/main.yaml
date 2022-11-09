@@ -1,28 +1,28 @@
 ---
 # file: roles/base/tasks/main.yaml
 # Contains basic setup tasks for Ubuntu
-- include: library/ssh_setup.yaml
+- include: library/ssh_setup.yaml # TODO: replace `include` with `include_tasks` due to deprecation
 
 # Hostname
 - name: Set hostname to inventory hostname
   hostname: name={{inventory_hostname}}
 
 # APT
-- include: apt.yaml
+- include: apt.yaml # TODO: replace `include` with `include_tasks` due to deprecation
 
 # Logwatch
-- include: logwatch.yaml
+- include: logwatch.yaml # TODO: replace `include` with `include_tasks` due to deprecation
   when: logwatch_email is defined and logwatch_email|length > 0
 
 # Users
-- include: users.yaml
+- include: users.yaml # TODO: replace `include` with `include_tasks` due to deprecation
 
 # SSH and Firewall hardening
-- include: ssh.yaml
-- include: firewall.yaml
+- include: ssh.yaml # TODO: replace `include` with `include_tasks` due to deprecation
+- include: firewall.yaml # TODO: replace `include` with `include_tasks` due to deprecation
 
 # Avahi service discovery (optional)
-- include: avahi.yaml
+- include: avahi.yaml # TODO: replace `include` with `include_tasks` due to deprecation
   when: enable_avahi is undefined or enable_avahi|bool is true
 
 # Disable history
@@ -30,5 +30,5 @@
   become: "{{ item }}"
   shell: echo 'alias exit="kill -9 $$"' >> ~/.bashrc
   loop:
-  - true
-  - false
+    - true
+    - false

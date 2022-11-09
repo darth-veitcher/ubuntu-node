@@ -1,33 +1,16 @@
----
+# file: ansible/inventory.yaml
 all:
-  hosts:
-    localbox:
-      ansible_port: 22  # 22 to begin with then 2222 afterwards
-      ansible_host: 192.168.0.234
-      ansible_user: adminlocal  # ubuntu when fresh, adminlocal afterwards
-      ansible_ssh_private_key_file: ~/.ssh/id_rsa
   children:
-    dev_masters:
+    homelab:
       hosts:
         node-1:
-          ansible_host: 192.168.0.10
-    dev_workers:
-      hosts:
+          ansible_host: 192.168.35.8
         node-2:
-          ansible_host: 192.168.0.11
+          ansible_host: 192.168.35.9
         node-3:
-          ansible_host: 192.168.0.12
-    dev:
-      children:
-        dev_masters:
-        dev_workers:
+          ansible_host: 192.168.35.10
       vars:
-        ansible_port: 2222  # 22 to begin with then 2222 afterwards
-        ansible_user: adminlocal  # ubuntu when fresh, adminlocal afterwards
-        ansible_ssh_private_key_file: ~/.ssh/id_rsa
-    masters:
-      children:
-        dev_masters:
-    workers:
-      children:
-        dev_workers:
+        ansible_port: 22 # 22 when fresh, 2222 afterwards
+        ansible_user: ansible # ansible when fresh, adminlocal afterwards
+        ansible_ssh_private_key_file: ../multipass/admin.id_rsa # ../multipass/admin.id_rsa when fresh, ~/.ssh/id_rsa after
+        ansible_ssh_common_args: "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -o ControlMaster=auto -o ControlPersist=10m"

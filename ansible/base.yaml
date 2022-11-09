@@ -2,7 +2,7 @@
 # file: base.yaml
 # Playbook to deploy the `base` role onto a server
 - hosts: all
-  gather_facts: no
+  gather_facts: true
   become: true
   vars_prompt:
     - name: "logwatch_email"
@@ -25,7 +25,7 @@
       private: "no"
       default: "no"
     - name: "enable_avahi"
-      prompt: "Enable service discovery [yes/no]"
+      prompt: "Enable avahi mDNS service discovery [yes/no]"
       private: "no"
       default: "yes"
   roles:
