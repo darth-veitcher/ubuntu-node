@@ -23,8 +23,8 @@
 
 - name: install ufw profile for k8s
   template: >
-            src=templates/ufw/microk8s.conf.j2
-            dest=/etc/ufw/applications.d/microk8s owner=root group=root mode=0644
+    src=templates/ufw/microk8s.conf.j2
+    dest=/etc/ufw/applications.d/microk8s owner=root group=root mode=0644
   tags: firewall
 
 - name: update ufw knowledge of microk8s app profile
@@ -41,20 +41,34 @@
     - MicroK8s-internal
   tags: firewall, k8s
 
+- name: allow access from private_subnets to MicroK8s
+  ufw:
+    rule: allow
+    name: MicroK8s
+    src: "{{ item }}"
+  loop:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+  tags: firewall, k8s
+  when: allow_private_networks is defined and allow_private_networks
+
 # The default IPv4 pool to create on startup if none exists. Pod IPs will be
 # chosen from this range. Changing this value after installation will have
 # no effect. This should fall within `--cluster-cidr`.
 # - name: CALICO_IPV4POOL_CIDR
 #   value: "10.1.0.0/16"
-- name: allow access from calico subnet to microk8s
-  ufw:
-    rule: allow
-    name: "{{ item }}"
-    src: 10.1.0.0/16
-  loop:
-    - MicroK8s
-    - MicroK8s-internal
-  tags: firewall, k8s
+# --
+# Removed 2022.11
+# - name: allow access from calico subnet to microk8s
+#   ufw:
+#     rule: allow
+#     name: "{{ item }}"
+#     src: 10.1.0.0/16
+#   loop:
+#     - MicroK8s
+#     - MicroK8s-internal
+#   tags: firewall, k8s
 
 # - name: allow access from kubernetes cni interface to microk8s
 #   ufw:
@@ -67,17 +81,18 @@
 #     - out
 #   tags: firewall, k8s
 
-- name: allow kubernetes calico interface in/out
-  ufw:
-    rule: allow
-    interface: vxlan.calico
-    direction: "{{ item }}"
-    to_port: ''
-    comment: 'allow all traffic {{ item }} on interface vxlan.calico'
-  loop:
-    - in
-    - out
-  tags: firewall
+# Removed 2022.11
+# - name: allow kubernetes calico interface in/out
+#   ufw:
+#     rule: allow
+#     interface: vxlan.calico
+#     direction: "{{ item }}"
+#     to_port: ''
+#     comment: 'allow all traffic {{ item }} on interface vxlan.calico'
+#   loop:
+#     - in
+#     - out
+#   tags: firewall
 
 - name: allow access from vpn interface to microk8s
   ufw:

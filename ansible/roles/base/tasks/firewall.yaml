@@ -91,4 +91,4 @@
   notify: restart ufw
   tags: firewall
 
-- include: library/ssh_setup.yaml # TODO: replace `include` with `include_tasks` due to deprecation
+- include_tasks: library/ssh_setup.yaml # TODO: replace `include` with `include_tasks` due to deprecation

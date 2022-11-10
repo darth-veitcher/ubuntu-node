@@ -1,28 +1,29 @@
 ---
 # file: roles/base/tasks/main.yaml
 # Contains basic setup tasks for Ubuntu
-- include: library/ssh_setup.yaml # TODO: replace `include` with `include_tasks` due to deprecation
+- name: Configure SSH
+  import_tasks: library/ssh_setup.yaml # TODO: replace `include` with `include_tasks` due to deprecation
 
 # Hostname
 - name: Set hostname to inventory hostname
   hostname: name={{inventory_hostname}}
 
 # APT
-- include: apt.yaml # TODO: replace `include` with `include_tasks` due to deprecation
+- include_tasks: apt.yaml # TODO: replace `include` with `include_tasks` due to deprecation
 
 # Logwatch
-- include: logwatch.yaml # TODO: replace `include` with `include_tasks` due to deprecation
+- include_tasks: logwatch.yaml # TODO: replace `include` with `include_tasks` due to deprecation
   when: logwatch_email is defined and logwatch_email|length > 0
 
 # Users
-- include: users.yaml # TODO: replace `include` with `include_tasks` due to deprecation
+- include_tasks: users.yaml # TODO: replace `include` with `include_tasks` due to deprecation
 
 # SSH and Firewall hardening
-- include: ssh.yaml # TODO: replace `include` with `include_tasks` due to deprecation
-- include: firewall.yaml # TODO: replace `include` with `include_tasks` due to deprecation
+- include_tasks: ssh.yaml # TODO: replace `include` with `include_tasks` due to deprecation
+- include_tasks: firewall.yaml # TODO: replace `include` with `include_tasks` due to deprecation
 
 # Avahi service discovery (optional)
-- include: avahi.yaml # TODO: replace `include` with `include_tasks` due to deprecation
+- include_tasks: avahi.yaml # TODO: replace `include` with `include_tasks` due to deprecation
   when: enable_avahi is undefined or enable_avahi|bool is true
 
 # Disable history

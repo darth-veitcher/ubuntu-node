@@ -1,12 +1,12 @@
 ---
 # file: roles/microk8s/tasks/main.yml
-- include: wipe.yaml # TODO: replace `include` with `include_tasks` due to deprecation
+- include_tasks: wipe.yaml # TODO: replace `include` with `include_tasks` due to deprecation
   when: wipe_cluster is defined and wipe_cluster
   tags: cluster, wipe
 
 - block:
-    - include: apt.yaml # TODO: replace `include` with `include_tasks` due to deprecation
-    - include: firewall.yaml # TODO: replace `include` with `include_tasks` due to deprecation
+    - include_tasks: apt.yaml # TODO: replace `include` with `include_tasks` due to deprecation
+    - include_tasks: firewall.yaml # TODO: replace `include` with `include_tasks` due to deprecation
     - name: add {{ deploy_user_name }} to microk8s group
       user:
         name: "{{ deploy_user_name }}"
@@ -36,6 +36,6 @@
       tags: user
   tags: prep
 
-- include: cluster.yaml # TODO: replace `include` with `include_tasks` due to deprecation
+- include_tasks: cluster.yaml # TODO: replace `include` with `include_tasks` due to deprecation
   when: init_cluster is defined and init_cluster
   tags: cluster, init

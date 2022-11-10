@@ -1,25 +1,41 @@
 ---
 # file: roles/microk8s/tasks/cluster.yml
 # initialises a cluster
+
 - block:
-  - name: setup master node
-    shell: microk8s enable dns storage rbac
-  - name: get join code
-    shell: microk8s add-node --token-ttl 3600
-    register: add_node
-  - debug: var=add_node
-  - set_fact:
-      join_command: "{{add_node.stdout_lines[1]}}"
-  - debug: var=join_command
-  - name: create temp folder for join files
-    file:
-      state: directory
-      path: deploy/microk8s
-    delegate_to: "localhost"
-    become: no
-  - copy: content="{{ join_command }}" dest="deploy/microk8s/join_command"
-    delegate_to: 127.0.0.1
-    become: no
+    - name: Collect only selected facts (IPv4)
+      ansible.builtin.setup:
+        filter:
+          - "ansible_default_ipv4"
+    - name: add nodes to /etc/hosts
+      # Needs to be performed to ensure nodes can resolve IP addresses to node hostnames
+      lineinfile:
+        path: /etc/hosts
+        line: "{{ hostvars[item].ansible_default_ipv4.address }}    {{ hostvars[item].inventory_hostname }}"
+      loop: "{{ ansible_play_batch }}"
+      run_once: no
+      when: hostvars[item].inventory_hostname != inventory_hostname
+
+- block:
+    - name: setup master node
+      shell: microk8s enable dns storage rbac
+    - name: get join code
+      shell: microk8s add-node --token-ttl 3600
+      register: add_node
+    - debug: var=add_node
+    - set_fact:
+        join_command: "{{add_node.stdout_lines[1]}}"
+        master_node: "{{inventory_hostname}}"
+    - debug: var=join_command
+    - name: create temp folder for join files
+      file:
+        state: directory
+        path: deploy/microk8s
+      delegate_to: "localhost"
+      become: no
+    - copy: content="{{ join_command }}" dest="deploy/microk8s/join_command"
+      delegate_to: 127.0.0.1
+      become: no
   tags: cluster, cluster-join
   run_once: yes
 
@@ -31,9 +47,10 @@
 
 - name: join cluster
   shell: "{{ join_command }}"
-  async: 3600  # 1hr
+  async: 3600 # 1hr
   poll: 30
   tags: cluster, cluster-join
+  when: inventory_hostname != master_node
 
 - name: remove temp folder for join files
   file:

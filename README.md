@@ -124,4 +124,23 @@ _<subtitle>Initialise Cluster</subtitle>_
 
 Basic usage to install MicroK8s and initialise a cluster with appropriate firewall configuration. Make sure you have setup an appropriate local inventory file containing the details of the servers.
 
-After prepping nodes with a `Base` role we can apply the `MicroK8s` role. See the kubernetes section (coming soon) for more information.
+After prepping nodes with a `Base` role we can apply the `MicroK8s` role. This role installs the MicroK8s snap and adds the appropriate firewall rules to allow communication between nodes. Passing `--extra-vars` to this playbook allows you to either `wipe` the kubernetes cluster or `initialise` a new one. See below where we initialise a cluster and allow private networks to access it.
+
+```zsh
+export ANSIBLE_CONFIG=ansible.cfg && poetry run ansible-playbook -i inventory.example.yaml microk8s.yaml --limit homelab --extra-vars '{"init_cluster": true, "allow_private_networks": true}'
+```
+
+Assuming you've used the quickstart you can login to one of the nodes and get the cluster details.
+
+```zsh
+ssh -p 2222 adminlocal@192.168.35.8
+```
+
+```zsh
+adminlocal@node-1:~$ kubectl get nodes
+
+NAME     STATUS   ROLES    AGE   VERSION
+node-1   Ready    <none>   19m   v1.25.3
+node-2   Ready    <none>   53s   v1.25.3
+node-3   Ready    <none>   63s   v1.25.3
+```
