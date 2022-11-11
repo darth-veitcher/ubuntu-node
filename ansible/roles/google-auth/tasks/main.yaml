@@ -63,15 +63,15 @@
 #   raw: head -n 1 $(getent passwd "{{ item.name }}" | awk -F':' '{ print $6 }')/.google_authenticator | qrencode -o - -s 6 -m 1 >> "{{ gauth_temp_folder.path }}/{{ item.name }}-google-auth.png"
 #   with_items: "{{ ssh_users }}"
 #   tags: google-auth
-# - name: copy script across
-#   copy:
-#     src: roles/google-auth/files/generate-qr.py
-#     dest: "{{ gauth_temp_folder.path }}/generate-qr.py"
-#     mode: 0700
-# - name: encode QR code to png
-#   raw: python3 "{{ gauth_temp_folder.path }}/generate-qr.py" -i {{ gauth_temp_folder.path }}/{{ item.name }}-google-auth.txt -u {{ item.name }}@{{ inventory_hostname }} --issuer {{ inventory_hostname }} -o "{{ gauth_temp_folder.path }}/{{ item.name }}-google-auth.png"
-#   with_items: "{{ ssh_users }}"
-#   tags: google-auth
+- name: copy script across
+  copy:
+    src: roles/google-auth/files/generate-qr.py
+    dest: "{{ gauth_temp_folder.path }}/generate-qr.py"
+    mode: 0700
+- name: encode QR code to png
+  raw: python3 "{{ gauth_temp_folder.path }}/generate-qr.py" -i {{ gauth_temp_folder.path }}/{{ item.name }}-google-auth.txt -u {{ item.name }}@{{ inventory_hostname }} --issuer {{ inventory_hostname }} -o "{{ gauth_temp_folder.path }}/{{ item.name }}-google-auth.png"
+  with_items: "{{ ssh_users }}"
+  tags: google-auth
 
 - name: create deploy folder
   file:
@@ -105,12 +105,13 @@
     flat: yes
   with_items: "{{ gauth_files.files }}"
   tags: google-auth
-- name: generate qr codes (because we're cool like that)
-  script: roles/google-auth/files/generate-qr.py -i "deploy/google-auth/{{ inventory_hostname }}/{{ item.name }}-google-auth.txt" -u {{ item.name }}@{{ inventory_hostname }} --issuer {{ inventory_hostname }} -o "deploy/google-auth/{{ inventory_hostname }}/{{ item.name }}-google-auth.png"
-  delegate_to: 127.0.0.1
-  become: no
-  with_items: "{{ ssh_users }}"
-  tags: google-auth
+
+# - name: generate qr codes (because we're cool like that)
+#   script: roles/google-auth/files/generate-qr.py -i "deploy/google-auth/{{ inventory_hostname }}/{{ item.name }}-google-auth.txt" -u {{ item.name }}@{{ inventory_hostname }} --issuer {{ inventory_hostname }} -o "deploy/google-auth/{{ inventory_hostname }}/{{ item.name }}-google-auth.png"
+#   delegate_to: 127.0.0.1
+#   become: no
+#   with_items: "{{ ssh_users }}"
+#   tags: google-auth
 
 # Process to return a user's OTP
 # SECRET is always the first line of the .google_authenticator file

@@ -3,9 +3,10 @@
 init:
 	python3 -m pip install --upgrade pip setuptools poetry
 	poetry install --with hardened
+	chmod 600 multipass/admin.id_rsa
 
 dev-cluster-up:
-	cd multipass && for i in {1..3}; do multipass launch -n node-$${i} --cloud-init cloud-init.yaml --mem 2G --disk 10G --cpus 1; done;
+	cd multipass && for i in {1..3}; do multipass launch -n node-$${i} --cloud-init cloud-init.yaml --mem 2G --disk 10G --cpus 1 || open "https://multipass.run"; done;
 
 dev-cluster-down:
 	for i in {1..3}; do multipass delete -p node-$${i}; done;

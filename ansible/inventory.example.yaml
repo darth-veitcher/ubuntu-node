@@ -4,11 +4,11 @@ all:
     homelab:
       hosts:
         node-1:
-          ansible_host: 192.168.35.8
+          ansible_host: 192.168.64.5
         node-2:
-          ansible_host: 192.168.35.9
+          ansible_host: 192.168.64.6
         node-3:
-          ansible_host: 192.168.35.10
+          ansible_host: 192.168.64.7
       vars:
         ansible_port: 22 # 22 when fresh, 2222 afterwards
         ansible_user: ansible # ansible when fresh, adminlocal afterwards
