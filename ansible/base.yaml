@@ -2,7 +2,7 @@
 # file: base.yaml
 # Playbook to deploy the `base` role onto a server
 - hosts: all
-  gather_facts: true
+  gather_facts: no
   become: true
   vars_prompt:
     - name: "logwatch_email"
