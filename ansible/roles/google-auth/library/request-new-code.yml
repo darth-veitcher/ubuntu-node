@@ -1,0 +1,24 @@
+---
+# file: library/request-new-code.yml
+# Used to generate a new `ansible_ssh_pass` and `ansible_become_pass` for the
+# user. Include the primary output task before each ssh request etc.
+#
+# Hacky, but works...
+# TODO: Make this better...
+
+############################### Google Auth ####################################
+
+- name: generate TOTP
+  command: roles/google-auth/library/google-auth.py -s "{{ SECRET_KEY }}"
+  delegate_to: "localhost"
+  become: no
+  register: generate_totp
+
+- name: set verification code as ssh/sudo password
+  set_fact:
+    ansible_ssh_pass: "{{ generate_totp.stdout }}"
+    # ansible_become_pass: "{{ generate_totp.stdout }}"
+  register: set_new_code
+
+- debug:
+    msg: "Set code to {{ ansible_ssh_pass }}"

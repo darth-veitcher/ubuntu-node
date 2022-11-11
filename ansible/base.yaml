@@ -25,7 +25,7 @@
       private: "no"
       default: "no"
     - name: "enable_avahi"
-      prompt: "Enable avahi mDNS service discovery [yes/no]"
+      prompt: "Enable avahi mDNS service discovery (useful for .local) [yes/no]"
       private: "no"
       default: "yes"
   roles:

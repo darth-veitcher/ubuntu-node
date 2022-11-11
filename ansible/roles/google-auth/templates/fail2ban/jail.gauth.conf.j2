@@ -1,0 +1,11 @@
+# file: /etc/fail2ban/jail.d/gauth.conf
+# Used to configure a Fail2Ban jail for Google Authenticator
+
+[gauth]
+enabled  = true
+port = {{ common_ssh_port }}
+filter = gauth
+action = ufw[name=SSH, port=ssh, protocol=tcp]
+logpath = %(sshd_log)s
+bantime = 1 ;# 1 day (in seconds)
+maxretry = 6 ;# after two failed rounds ban them (3 in each connection)

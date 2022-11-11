@@ -1,0 +1,8 @@
+---
+# file: base.yaml
+# Playbook to deploy the `base` role onto a server
+- hosts: all
+  gather_facts: false
+  become: true
+  roles:
+    - google-auth

@@ -1,0 +1,25 @@
+# file: /etc/fail2ban/filter.d/gauth.conf
+# Used to configure a Fail2Ban filter for failed google-auth logins with 2FA.
+# Checks for failed PAM attempts resulting from incorrect verification codes
+# via SSH.
+
+[INCLUDES]
+
+# Read common prefixes. If any customizations available -- read them from
+# common.local
+before = common.conf
+
+[Definition]
+
+_daemon = sshd
+
+failregex = ^%(__prefix_line)s(?:error: PAM: )Cannot make/remove an entry for the specified session for .+ from <HOST>
+
+ignoreregex =
+
+[Init]
+
+# "maxlines" is number of log lines to buffer for multi-line regex searches
+maxlines = 10
+
+journalmatch = _SYSTEMD_UNIT=sshd.service + _COMM=sshd

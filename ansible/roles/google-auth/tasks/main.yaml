@@ -1,0 +1,208 @@
+---
+# file: roles/base/tasks/google-auth.yaml
+# source: https://github.com/darth-veitcher/ansible-roles/blob/hardened/library/google-auth.py
+# Used for adding Google Auth (2FA) hardening to user logins and ssh. Included
+# as separate .yml with an import so can be ignored if not wanted.
+- name: Configure SSH
+  import_tasks: library/ssh_setup.yaml
+
+- name: install google-authenticator and qrencode
+  apt: name="{{ item }}" state=latest
+  with_items:
+    - libpam-google-authenticator
+    - qrencode
+    - at
+    - python3
+  tags: apt, google-auth
+
+- name: ensure ntp is setup
+  apt: name=ntp state=latest
+  tags: apt
+
+- name: create temp folder for google-auth files
+  tempfile: # <-- only available in >=v2.3 of ansible
+    state: directory
+    suffix: google-auth
+  register: gauth_temp_folder
+  tags: google-auth
+
+- name: create deploy folder
+  file:
+    path: "deploy/google-auth/{{ inventory_hostname }}"
+    state: directory
+  delegate_to: "localhost"
+  become: no
+  tags: google-auth
+
+# Run `google-authenticator` with following parameters
+# -q, --quiet              Quiet mode
+# -t, --time-based         Set up time-based (TOTP) verification
+# -f, --force              Write file without first confirming with user
+# -d, --disallow-reuse     Disallow reuse of previously used TOTP tokens // all
+# -D, --allow-reuse        Allow reuse of previously used TOTP tokens // ansible
+# -r, --rate-limit=N       Limit logins to 3 per every M seconds
+# -R, --rate-time=M        Limit logins to N per every 30 seconds
+# -w, --window-size=w      Set window of concurrently valid codes
+# -l                       Add a label to explain what it is
+- name: generate google-auth details
+  raw: sudo -Hu {{ item.name }} google-authenticator -q -t -f -d -r 3 -R 30 -w 5 -l "{{ item.name }}@{{ inventory_hostname }}"
+  with_items: "{{ ssh_users }}"
+  tags: google-auth
+- name: generate google-auth details ({{ deploy_user_name }})
+  raw: sudo -Hu {{ item }} google-authenticator -q -t -f -D -r 10 -R 15 -w 5 -l "{{ item }}@{{ inventory_hostname }}"
+  with_items:
+    - "{{ deploy_user_name }}"
+  tags: google-auth
+
+- name: copy details to tmp folder
+  raw: cat $(getent passwd "{{ item.name }}" | awk -F':' '{ print $6 }')/.google_authenticator > "{{ gauth_temp_folder.path }}/{{ item.name }}-google-auth.txt"
+  with_items: "{{ ssh_users }}"
+  tags: google-auth
+
+# - name: encode QR code
+#   raw: head -n 1 $(getent passwd "{{ item.name }}" | awk -F':' '{ print $6 }')/.google_authenticator | qrencode -o - -s 6 -m 1 >> "{{ gauth_temp_folder.path }}/{{ item.name }}-google-auth.png"
+#   with_items: "{{ ssh_users }}"
+#   tags: google-auth
+# - name: copy script across
+#   copy:
+#     src: roles/google-auth/files/generate-qr.py
+#     dest: "{{ gauth_temp_folder.path }}/generate-qr.py"
+#     mode: 0700
+# - name: encode QR code to png
+#   raw: python3 "{{ gauth_temp_folder.path }}/generate-qr.py" -i {{ gauth_temp_folder.path }}/{{ item.name }}-google-auth.txt -u {{ item.name }}@{{ inventory_hostname }} --issuer {{ inventory_hostname }} -o "{{ gauth_temp_folder.path }}/{{ item.name }}-google-auth.png"
+#   with_items: "{{ ssh_users }}"
+#   tags: google-auth
+
+- name: create deploy folder
+  file:
+    path: "deploy/google-auth/{{ inventory_hostname }}"
+    state: directory
+  delegate_to: "localhost"
+  become: no
+  tags: google-auth
+
+- name: find all google-auth files
+  find:
+    paths: "{{ gauth_temp_folder.path }}"
+    patterns: ".*\\.(txt|png)$"
+    use_regex: True
+  register: gauth_files
+  tags: google-auth
+
+- name: delete existing google-auth files
+  file:
+    path: "deploy/google-auth/{{ inventory_hostname }}/{{ item.path }}"
+    state: absent
+  with_items: "{{ gauth_files.files }}"
+  delegate_to: "localhost"
+  become: no
+  tags: google-auth
+
+- name: pull back details
+  fetch:
+    src: "{{ item.path }}"
+    dest: "deploy/google-auth/{{ inventory_hostname }}/"
+    flat: yes
+  with_items: "{{ gauth_files.files }}"
+  tags: google-auth
+- name: generate qr codes (because we're cool like that)
+  script: roles/google-auth/files/generate-qr.py -i "deploy/google-auth/{{ inventory_hostname }}/{{ item.name }}-google-auth.txt" -u {{ item.name }}@{{ inventory_hostname }} --issuer {{ inventory_hostname }} -o "deploy/google-auth/{{ inventory_hostname }}/{{ item.name }}-google-auth.png"
+  delegate_to: 127.0.0.1
+  become: no
+  with_items: "{{ ssh_users }}"
+  tags: google-auth
+
+# Process to return a user's OTP
+# SECRET is always the first line of the .google_authenticator file
+# This is required before `including` the `request-new-code` helper.
+- name: return '{{ deploy_user_name }}' secret
+  shell: head -n 1 $(getent passwd "{{ deploy_user_name }}" | awk -F':' '{ print $6 }')/.google_authenticator
+  register: get_secret
+- name: set SECRET_KEY as fact
+  set_fact:
+    SECRET_KEY: "{{ get_secret.stdout }}"
+- debug:
+    msg: "SECRET_KEY set to {{ SECRET_KEY }}"
+
+# Now modify PAM
+- name: enable ChallengeResponseAuthentication
+  lineinfile: dest=/etc/ssh/sshd_config
+    regexp="^ChallengeResponseAuthentication no$"
+    line="ChallengeResponseAuthentication yes"
+  tags: ssh, google-auth
+
+# The ',' between methods forces both (a space would mean either)
+- name: force use of both keys and 2fa
+  lineinfile: dest=/etc/ssh/sshd_config
+    regexp="^AuthenticationMethods.*$"
+    line="AuthenticationMethods publickey,keyboard-interactive"
+  tags: ssh
+- include: roles/google-auth/library/request-new-code.yml
+
+- name: modify sshd_config to allow keyboard (challenge-response passwords)
+  lineinfile: dest=/etc/ssh/sshd_config
+    regexp="^KbdInteractiveAuthentication .*$"
+    line="KbdInteractiveAuthentication yes"
+  tags: google-auth
+
+# RedHat etc. use `system-auth`
+- name: modify PAM configuration for SSH
+  blockinfile:
+    dest: /etc/pam.d/sshd
+    insertbefore: BOF
+    marker: "# {mark} GOOGLE AUTHENTICATOR MANAGED BLOCK"
+    block: |
+      # don't allow `nullok`
+      # first factor is ssh key, second factor google-auth therefore
+      # `success=done` (i.e. bypass need for password)
+      auth    [success=done new_authtok_reqd=done default=die]    pam_google_authenticator.so
+  tags: google-auth
+- include: roles/google-auth/library/request-new-code.yml
+  tags: google-auth
+
+# Now restart ssh for changes to take effect
+- name: restart ssh...
+  service: name=ssh state=restarted enabled=yes
+  tags: ssh, google-auth
+- include: roles/google-auth/library/request-new-code.yml
+  tags: google-auth
+
+- name: modify PAM configuration for logins
+  blockinfile:
+    dest: /etc/pam.d/login
+    insertbefore: BOF
+    marker: "# {mark} ANSIBLE MANAGED BLOCK"
+    block: |
+      # don't allow `nullok`
+      # use `required` to force usage of password as second factor
+      auth required pam_google_authenticator.so [authtok_prompt=MFA Token: ]
+  tags: google-auth
+- include: roles/google-auth/library/request-new-code.yml
+  tags: google-auth
+- name: create fail2ban jail for google-auth
+  template: >
+    src=templates/fail2ban/jail.gauth.conf.j2
+    dest=/etc/fail2ban/jail.d/gauth.conf owner=root group=root mode=0644
+  tags:
+    - firewall
+    - ssh
+    - google-auth
+- include: roles/google-auth/library/request-new-code.yml
+  tags: google-auth
+
+- name: create fail2ban filter for google-auth
+  template: >
+    src=templates/fail2ban/filter.gauth.conf.j2
+    dest=/etc/fail2ban/filter.d/gauth.conf owner=root group=root mode=0644
+  tags:
+    - firewall
+    - ssh
+    - google-auth
+- include: roles/google-auth/library/request-new-code.yml
+  tags: google-auth
+
+- name: restart fail2ban
+  service: name=fail2ban state=restarted enabled=yes
+  tags: ssh, google-auth
+- include: roles/google-auth/library/request-new-code.yml
+  tags: google-auth

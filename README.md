@@ -1,10 +1,10 @@
 # Ubuntu Node
 
-Setup for basic Ubuntu Server nodes, including provisioning for Kubernetes via [ansible](https://www.ansible.com). Primarily tested on 22.04 LTS as of November 2022.
+Setup for basic Ubuntu Server nodes, including provisioning for Kubernetes ([MicroK8s](https://microk8s.io)) via [ansible](https://www.ansible.com). Primarily tested on 22.04 LTS as of November 2022 albeit the playbook has been in use in various forms since ~16.04.....
 
-## How to use
+## ℹ️ How to use
 
-ℹ️ You'll need a recent (>=3.7) version of python in order to be able to run ansible. If you don't have that head on over to [python.org](https://python.org) and download a compatible version for your platform.
+You'll need a recent (>=3.7) version of python 🐍 in order to be able to run ansible. If you don't have that head on over to [python.org](https://python.org) and download a compatible version for your platform. Development and testing has been primarily performed on MacOS (both Intel and Apple Silicon) but this should work on most platforms.
 
 ### Setup Inventory
 
@@ -117,6 +117,34 @@ A Base role exists inside `ansible/roles/base` and is called with the `ansible/b
 - Avahi mDNS broadcast capabilities for service discovery (optional)
 
 **NB:** Regeneration of the moduli file could take an _**extremely**_ long time depending on the target machine. Use at your own discretion if you feel your threat profile requires it. See [Is it considered worth it to replace OpenSSH's moduli file?](https://security.stackexchange.com/questions/79043/is-it-considered-worth-it-to-replace-opensshs-moduli-file), [OpenSSH moduli](https://entropux.net/article/openssh-moduli/), and [Secure Secure Shell](https://stribika.github.io/2015/01/04/secure-secure-shell.html) for further reading. By default this playbook will disable known insecure keys and ciphers using guidance available from [Mozilla](https://infosec.mozilla.org/guidelines/openssh) as a minimum baseline. Rule of thumb: if you don't have physical control of your hardware **and** you're a literal enemy of a state... you might want to do this... otherwise potentially not 🤷.
+
+## Google Auth
+
+This is an optional role which implements [google-authenticator-libpam](https://github.com/google/google-authenticator-libpam), forcing users to have a multifactor token (TOTP) in order to access the server via ssh and run commands.
+
+The role will create two files within the `ansible/deploy/{{ inventory_hostname }}` folders associated with the users you've specified in the `ssh_users` group and/or your `deploy_username` variables.
+
+Assuming you've used the `make install-gauth-example` quickstart command:
+
+```zsh
+➜ tree ansible/deploy/google-auth
+
+ansible/deploy/google-auth
+├── node-1
+│   ├── adminlocal-google-auth.png
+│   └── adminlocal-google-auth.txt
+├── node-2
+│   ├── adminlocal-google-auth.png
+│   └── adminlocal-google-auth.txt
+└── node-3
+    ├── adminlocal-google-auth.png
+    └── adminlocal-google-auth.txt
+```
+
+The .txt file contains the original seed secret and backup codes
+The png file is a scannable qr code similar to the below
+
+![qr](assets/adminlocal-google-auth.png)
 
 ### MicroK8s
 

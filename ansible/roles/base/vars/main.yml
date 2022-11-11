@@ -1,9 +1,9 @@
 ---
 # file: roles/base/vars/main.yml
 
-# only these users will have SSH access to the server
-ssh_users:
-    - name: "{{ ubuntu_common_deploy_user_name }}"
+# # only these users will have SSH access to the server
+# ssh_users:
+#   - name: "{{ deploy_user_name }}"
 
 # can add additional users here if needed
 users:
