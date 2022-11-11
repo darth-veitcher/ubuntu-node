@@ -4,6 +4,10 @@
 - name: Configure SSH
   import_tasks: library/ssh_setup.yaml # TODO: replace `include` with `include_tasks` due to deprecation
 
+# Gather facts now we've established SSH
+- name: Collect facts post-SSH config
+  ansible.builtin.setup:
+
 # Hostname
 - name: Set hostname to inventory hostname
   hostname: name={{inventory_hostname}}
