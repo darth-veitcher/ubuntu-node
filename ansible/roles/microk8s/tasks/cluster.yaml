@@ -2,19 +2,21 @@
 # file: roles/microk8s/tasks/cluster.yml
 # initialises a cluster
 
-- block:
-    - name: Collect only selected facts (IPv4)
-      ansible.builtin.setup:
-        filter:
-          - "ansible_default_ipv4"
-    - name: add nodes to /etc/hosts
-      # Needs to be performed to ensure nodes can resolve IP addresses to node hostnames
-      lineinfile:
-        path: /etc/hosts
-        line: "{{ hostvars[item].ansible_default_ipv4.address }}    {{ hostvars[item].inventory_hostname }}"
-      loop: "{{ ansible_play_batch }}"
-      run_once: no
-      when: hostvars[item].inventory_hostname != inventory_hostname
+- name: Collect only selected facts (IPv4)
+  ansible.builtin.setup:
+    filter:
+      - "ansible_default_ipv4"
+- name: add nodes to /etc/hosts
+  # Needs to be performed to ensure nodes can resolve IP addresses to node hostnames
+  # We add all the nodes to the hosts file so they can be resolved using their ip address
+  # where the ip address isn't the loopback and the hostname isnt the same as the node being
+  # worked on.
+  lineinfile:
+    path: /etc/hosts
+    regexp: ^(?!127\.0\.0\.1)(?!inventory_hostname).*hostvars[item].inventory_hostname$
+    line: "{{ hostvars[item].ansible_default_ipv4.address }}    {{ hostvars[item].inventory_hostname }}"
+  loop: "{{ ansible_play_batch }}"
+  run_once: no
 
 - block:
     - name: setup master node
