@@ -122,6 +122,18 @@ A Base role exists inside `ansible/roles/base` and is called with the `ansible/b
 
 This is an optional role which implements [google-authenticator-libpam](https://github.com/google/google-authenticator-libpam), forcing users to have a multifactor token (TOTP) in order to access the server via ssh and run commands.
 
+⚠️ This will break further use of Ansible workbooks and so use at the end. See [known bug](https://github.com/ansible/ansible/issues/16259) with the use of 2FA and Ansible. ⚠️
+
+To disable it briefly later on edit the ssh service configuration and then restart it:
+
+```
+# file: /etc/ssh/sshd_config
+Match User {{ your_user_name }}
+  AuthenticationMethods publickey
+```
+
+The above will allow publickey only authentication over SSH for our ansible user. Remember to remove this and restart the service when finished.
+
 The role will create two files within the `ansible/deploy/{{ inventory_hostname }}` folders associated with the users you've specified in the `ssh_users` group and/or your `deploy_username` variables.
 
 Assuming you've used the `make install-gauth-example` quickstart command:
