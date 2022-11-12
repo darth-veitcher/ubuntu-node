@@ -1,0 +1,16 @@
+# file: ansible/inventory.yaml
+all:
+  children:
+    homelab:
+      hosts:
+        mini-1:
+          ansible_host: 192.168.1.221
+        mini-2:
+          ansible_host: 192.168.1.222
+        mini-3:
+          ansible_host: 192.168.1.223
+      vars:
+        ansible_port: 22 # 22 when fresh, 2222 afterwards
+        ansible_user: adminlocal # ansible when fresh, adminlocal afterwards
+        ansible_ssh_private_key_file: ~/.ssh/id_rsa # ../multipass/admin.id_rsa when fresh, ~/.ssh/id_rsa after
+        ansible_ssh_common_args: "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -o ControlMaster=auto -o ControlPersist=10m"

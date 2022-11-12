@@ -137,7 +137,7 @@
     regexp="^AuthenticationMethods.*$"
     line="AuthenticationMethods publickey,keyboard-interactive"
   tags: ssh
-- include: roles/google-auth/library/request-new-code.yml
+- include: library/request-new-code.yml
 
 - name: modify sshd_config to allow keyboard (challenge-response passwords)
   lineinfile: dest=/etc/ssh/sshd_config
@@ -157,14 +157,14 @@
       # `success=done` (i.e. bypass need for password)
       auth    [success=done new_authtok_reqd=done default=die]    pam_google_authenticator.so
   tags: google-auth
-- include: roles/google-auth/library/request-new-code.yml
+- include: library/request-new-code.yml
   tags: google-auth
 
 # Now restart ssh for changes to take effect
 - name: restart ssh...
   service: name=ssh state=restarted enabled=yes
   tags: ssh, google-auth
-- include: roles/google-auth/library/request-new-code.yml
+- include: library/request-new-code.yml
   tags: google-auth
 
 - name: modify PAM configuration for logins
@@ -177,7 +177,7 @@
       # use `required` to force usage of password as second factor
       auth required pam_google_authenticator.so [authtok_prompt=MFA Token: ]
   tags: google-auth
-- include: roles/google-auth/library/request-new-code.yml
+- include: library/request-new-code.yml
   tags: google-auth
 - name: create fail2ban jail for google-auth
   template: >
@@ -187,7 +187,7 @@
     - firewall
     - ssh
     - google-auth
-- include: roles/google-auth/library/request-new-code.yml
+- include: library/request-new-code.yml
   tags: google-auth
 
 - name: create fail2ban filter for google-auth
@@ -198,11 +198,11 @@
     - firewall
     - ssh
     - google-auth
-- include: roles/google-auth/library/request-new-code.yml
+- include: library/request-new-code.yml
   tags: google-auth
 
 - name: restart fail2ban
   service: name=fail2ban state=restarted enabled=yes
   tags: ssh, google-auth
-- include: roles/google-auth/library/request-new-code.yml
+- include: library/request-new-code.yml
   tags: google-auth

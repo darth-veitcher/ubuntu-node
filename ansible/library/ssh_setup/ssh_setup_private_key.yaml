@@ -3,85 +3,86 @@
 # First, check {{ ansible_user }} with {{ ansible_port }}
 - name: Check {{ ansible_user }}@{{ ansible_host | default(inventory_hostname) }} | with {{ ansible_ssh_private_key_file }} | port {{ ansible_port }}
   become: no
-  command: ssh -q -o BatchMode=yes -o ConnectTimeout=3 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p {{ ansible_port }} -i {{ ansible_ssh_private_key_file }} {{ ansible_user }}@{{ ansible_host | default(inventory_hostname) }} "echo OK"
+  command: ssh -o BatchMode=yes -o ConnectTimeout=3 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p {{ ansible_port }} -i {{ ansible_ssh_private_key_file }} {{ ansible_user }}@{{ ansible_host | default(inventory_hostname) }} "echo OK"
   delegate_to: 127.0.0.1
   changed_when: false
   failed_when: false
   register: check_ansible_user
-- set_fact: 
+- set_fact:
     ssh_details_known: true
-  when: check_ansible_user.rc == 0
-- set_fact: 
+  when: 'check_ansible_user.rc == 0 or ("keyboard-interactive" in check_ansible_user.stderr and use_mfa is defined and use_mfa|bool)'
+- set_fact:
     ssh_details_known: false
-  when: check_ansible_user.rc > 0
+  when: 'check_ansible_user.rc > 0 or ("keyboard-interactive" not in check_ansible_user.stderr and use_mfa is defined and use_mfa|bool)'
 
 # Second, check if variable user with the port defined as a variable and our variable ssh key (ie. what we want to set it to finally)
 - block:
-  - name: Check {{ deploy_user_name }}@{{ ansible_host | default(inventory_hostname) }} | with {{ deploy_user_ssh_private_key }} | port {{ common_ssh_port }}
-    become: no
-    command: ssh -q -o BatchMode=yes -o ConnectTimeout=3 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p {{ common_ssh_port }} -i {{ deploy_user_ssh_private_key }} {{ deploy_user_name }}@{{ ansible_host | default(inventory_hostname) }} "echo OK"
-    delegate_to: 127.0.0.1
-    changed_when: false
-    failed_when: false
-    register: check_ansible_user_with_key
-
-  - name: Set ansible_port to {{ common_ssh_port }}
-    set_fact:
-      ansible_port: "{{ common_ssh_port }}"
-      ansible_user: "{{ deploy_user_name }}"
-      ansible_ssh_private_key_file: "{{ deploy_user_ssh_private_key }}"
-      ssh_details_known: true
-    when: check_ansible_user_with_key.rc == 0
+    - name: Check {{ deploy_user_name }}@{{ ansible_host | default(inventory_hostname) }} | with {{ deploy_user_ssh_private_key }} | port {{ common_ssh_port }}
+      become: no
+      command: ssh -o BatchMode=yes -o ConnectTimeout=3 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p {{ common_ssh_port }} -i {{ deploy_user_ssh_private_key }} {{ deploy_user_name }}@{{ ansible_host | default(inventory_hostname) }} "echo OK"
+      delegate_to: 127.0.0.1
+      changed_when: false
+      failed_when: false
+      register: check_ansible_user_with_key
+    - debug:
+        var: check_ansible_user_with_key
+    - name: Set ansible_port to {{ common_ssh_port }}
+      set_fact:
+        ansible_port: "{{ common_ssh_port }}"
+        ansible_user: "{{ deploy_user_name }}"
+        ansible_ssh_private_key_file: "{{ deploy_user_ssh_private_key }}"
+        ssh_details_known: true
+      when: 'check_ansible_user_with_key.rc == 0 or ("keyboard-interactive" in check_ansible_user_with_key.stderr and use_mfa is defined and use_mfa|bool)'
   when: ssh_details_known is false
 
 # Third, check if variable user with the port defined as a variable (ie. what we want to set it to finally)
 - block:
-  - name: Check {{ deploy_user_name }}@{{ ansible_host | default(inventory_hostname) }} | with {{ ansible_ssh_private_key_file }} | port {{ common_ssh_port }}
-    become: no
-    command: ssh -q -o BatchMode=yes -o ConnectTimeout=3 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p {{ common_ssh_port }} -i {{ ansible_ssh_private_key_file }} {{ deploy_user_name }}@{{ ansible_host | default(inventory_hostname) }} "echo OK"
-    delegate_to: 127.0.0.1
-    changed_when: false
-    failed_when: false
-    register: check_ansible_user_with_key
-  - name: Set ansible_port to {{ common_ssh_port }}
-    set_fact:
-      ansible_port: "{{ common_ssh_port }}"
-      ansible_user: "{{ deploy_user_name }}"
-      ssh_details_known: true
-    when: check_ansible_user_with_key.rc == 0
+    - name: Check {{ deploy_user_name }}@{{ ansible_host | default(inventory_hostname) }} | with {{ ansible_ssh_private_key_file }} | port {{ common_ssh_port }}
+      become: no
+      command: ssh -o BatchMode=yes -o ConnectTimeout=3 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p {{ common_ssh_port }} -i {{ ansible_ssh_private_key_file }} {{ deploy_user_name }}@{{ ansible_host | default(inventory_hostname) }} "echo OK"
+      delegate_to: 127.0.0.1
+      changed_when: false
+      failed_when: false
+      register: check_ansible_user_with_key
+    - name: Set ansible_port to {{ common_ssh_port }}
+      set_fact:
+        ansible_port: "{{ common_ssh_port }}"
+        ansible_user: "{{ deploy_user_name }}"
+        ssh_details_known: true
+      when: 'check_ansible_user_with_key.rc == 0 or ("keyboard-interactive" in check_ansible_user_with_key.stderr and use_mfa is defined and use_mfa|bool)'
   when: ssh_details_known is false
 
 # Fourth, check {{ ansible_user}} with the port defined as a variable (ie. what we want to set it to finally)
 - block:
-  - name: Check {{ ansible_user }}@{{ ansible_host | default(inventory_hostname) }} | with {{ ansible_ssh_private_key_file }} | port 22
-    become: no
-    command: ssh -q -o BatchMode=yes -o ConnectTimeout=3 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p {{ common_ssh_port }} -i {{ ansible_ssh_private_key_file }} {{ ansible_user }}@{{ ansible_host | default(inventory_hostname) }} "echo OK"
-    delegate_to: 127.0.0.1
-    changed_when: false
-    failed_when: false
-    register: check_ansible_user
-  - name: Set ansible_port to {{ common_ssh_port }}
-    set_fact:
-      ansible_port: "{{ common_ssh_port }}"
-    when: not check_ansible_user.rc > 0
+    - name: Check {{ ansible_user }}@{{ ansible_host | default(inventory_hostname) }} | with {{ ansible_ssh_private_key_file }} | port 22
+      become: no
+      command: ssh -o BatchMode=yes -o ConnectTimeout=3 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p {{ common_ssh_port }} -i {{ ansible_ssh_private_key_file }} {{ ansible_user }}@{{ ansible_host | default(inventory_hostname) }} "echo OK"
+      delegate_to: 127.0.0.1
+      changed_when: false
+      failed_when: false
+      register: check_ansible_user
+    - name: Set ansible_port to {{ common_ssh_port }}
+      set_fact:
+        ansible_port: "{{ common_ssh_port }}"
+      when: 'not check_ansible_user.rc > 0 or ("keyboard-interactive" in check_ansible_user.stderr and use_mfa is defined and use_mfa|bool)'
   when: ssh_details_known is false
 
 # Fallback, check {{ ansible_user}} with port 22
 - block:
-  - name: Check {{ ansible_user }}@{{ ansible_host | default(inventory_hostname) }} | with {{ ansible_ssh_private_key_file }} | port 22
-    become: no
-    command: ssh -q -o BatchMode=yes -o ConnectTimeout=3 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {{ ansible_ssh_private_key_file }} {{ ansible_user }}@{{ ansible_host | default(inventory_hostname) }} "echo OK"
-    delegate_to: 127.0.0.1
-    changed_when: false
-    failed_when: false
-    register: check_ansible_user
-  - name: Set ansible_port to 22
-    set_fact:
-      ansible_port: 22
-      ssh_details_known: true
-    when: check_ansible_user.rc > 0
+    - name: Check {{ ansible_user }}@{{ ansible_host | default(inventory_hostname) }} | with {{ ansible_ssh_private_key_file }} | port 22
+      become: no
+      command: ssh -o BatchMode=yes -o ConnectTimeout=3 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {{ ansible_ssh_private_key_file }} {{ ansible_user }}@{{ ansible_host | default(inventory_hostname) }} "echo OK"
+      delegate_to: 127.0.0.1
+      changed_when: false
+      failed_when: false
+      register: check_ansible_user
+    - name: Set ansible_port to 22
+      set_fact:
+        ansible_port: 22
+        ssh_details_known: true
+      when: 'check_ansible_user.rc > 0 or ("keyboard-interactive" not in check_ansible_user.stderr and use_mfa is defined and use_mfa|bool)'
   when: ssh_details_known is false
 
 - debug:
-    msg: "User: {{ ansible_user }} | Port: {{ ansible_port }} | Key: {{ ansible_ssh_private_key_file|default(none) }}"
+    msg: "User: {{ ansible_user }} | Port: {{ ansible_port }} | Key: {{ ansible_ssh_private_key_file|default(none) }} | MFA Token: {{ generate_totp.stdout|default(none) }}"
   when: ssh_details_known

@@ -8,8 +8,21 @@
 
 ############################### Google Auth ####################################
 
+- block:
+    - name: get '{{ deploy_user_name }}' secret
+      shell: head -n 1 "deploy/google-auth/{{ inventory_hostname }}/{{ deploy_user_name }}-google-auth.txt"
+      register: get_secret
+    - name: set SECRET_KEY as fact
+      set_fact:
+        SECRET_KEY: "{{ get_secret.stdout }}"
+  delegate_to: "localhost"
+  become: no
+  when: SECRET_KEY is undefined
+- debug:
+    msg: "SECRET_KEY set to {{ SECRET_KEY }}"
+
 - name: generate TOTP
-  command: roles/google-auth/library/google-auth.py -s "{{ SECRET_KEY }}"
+  command: library/google-auth.py -s "{{ SECRET_KEY }}"
   delegate_to: "localhost"
   become: no
   register: generate_totp

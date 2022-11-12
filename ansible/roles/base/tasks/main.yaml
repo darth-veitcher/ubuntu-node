@@ -4,6 +4,9 @@
 - name: Configure SSH
   import_tasks: library/ssh_setup.yaml # TODO: replace `include` with `include_tasks` due to deprecation
 
+- include_tasks: library/request-new-code.yml
+  tags: google-auth
+  when: use_mfa is defined and use_mfa|bool
 # Gather facts now we've established SSH
 - name: Collect facts post-SSH config
   ansible.builtin.setup:

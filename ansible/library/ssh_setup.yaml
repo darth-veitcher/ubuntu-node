@@ -6,6 +6,11 @@
 - set_fact:
     ssh_details_known: false
 
+#### Test whether we need to include a MFA code
+- include_tasks: library/request-new-code.yml
+  tags: google-auth
+  when: use_mfa is defined and use_mfa|bool
+
 #### Executed when we have a private key defined ####
 - include_tasks: library/ssh_setup/ssh_setup_private_key.yaml # TODO: replace `include` with `include_tasks` due to deprecation
   when: (ansible_ssh_private_key_file is defined) and (ssh_details_known is false)

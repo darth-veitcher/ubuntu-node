@@ -5,16 +5,28 @@
 - block:
     - name: Collect only selected facts (IPv4)
       ansible.builtin.setup:
-        filter:
-          - "ansible_default_ipv4"
+        # filter:
+        #   - "ansible_default_ipv4"
+    - name: initialise list
+      set_fact:
+        all_ips: [{}]
+    - name: get all ips
+      set_fact:
+        all_ips: "{{ all_ips | combine({item: item | map('extract', hostvars, ['ansible_host'])}) }}"
+      loop: "{{ ansible_play_batch }}"
+    - name: print ips
+      debug: var=all_ips
+      run_once: yes
     - name: add nodes to /etc/hosts
       # Needs to be performed to ensure nodes can resolve IP addresses to node hostnames
       lineinfile:
         path: /etc/hosts
+        regexp: r"^(?!127\.0\.1\.1).*{{ hostvars[item].inventory_hostname }}$"
         line: "{{ hostvars[item].ansible_default_ipv4.address }}    {{ hostvars[item].inventory_hostname }}"
+        state: present
       loop: "{{ ansible_play_batch }}"
       run_once: no
-      when: hostvars[item].inventory_hostname != inventory_hostname
+      # when: hostvars[item].inventory_hostname != inventory_hostname
 
 - block:
     - name: setup master node
