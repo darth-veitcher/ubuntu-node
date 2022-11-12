@@ -2,8 +2,7 @@
 # removes microk8s and all associated configs
 - name: remove microk8s
   community.general.snap:
-    name: microk8s
-    classic: yes
+    name: microk8s #
     state: absent
   tags: apt
 
